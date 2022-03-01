@@ -48,8 +48,13 @@ from openapi2jsonschema.errors import UnsupportedError
     is_flag=True,
     help="Prohibits properties not in the schema (additionalProperties: false)",
 )
+@click.option(
+    "--skip-no-properties",
+    is_flag=True,
+    help="Skip definitions that don't have properties (like io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSON)"
+)
 @click.argument("schema", metavar="SCHEMA_URL")
-def default(output, schema, prefix, stand_alone, expanded, kubernetes, strict):
+def default(output, schema, prefix, stand_alone, expanded, kubernetes, strict, skip_no_properties):
     """
     Converts a valid OpenAPI specification into a set of JSON Schema files
     """
@@ -94,6 +99,11 @@ def default(output, schema, prefix, stand_alone, expanded, kubernetes, strict):
                 # For Kubernetes, populate `apiVersion` and `kind` properties from `x-kubernetes-group-version-kind`
                 for type_name in definitions:
                     type_def = definitions[type_name]
+
+                    if skip_no_properties and ("properties" not in type_def.keys()):
+                        info("Skipping {}".format(type_name))
+                        continue
+
                     if "x-kubernetes-group-version-kind" in type_def:
                         for kube_ext in type_def["x-kubernetes-group-version-kind"]:
                             if expanded and "apiVersion" in type_def["properties"]:
