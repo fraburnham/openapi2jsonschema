@@ -53,11 +53,19 @@ from openapi2jsonschema.errors import UnsupportedError
     is_flag=True,
     help="Skip definitions that don't have properties (like io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSON)"
 )
+@click.option(
+    "--skip-kinds",
+    default="",
+    help="Comma separated list of k8s kinds to skip"
+)
 @click.argument("schema", metavar="SCHEMA_URL")
-def default(output, schema, prefix, stand_alone, expanded, kubernetes, strict, skip_no_properties):
+def default(output, schema, prefix, stand_alone, expanded, kubernetes, strict, skip_no_properties, skip_kinds):
     """
     Converts a valid OpenAPI specification into a set of JSON Schema files
     """
+
+    skip_kinds = skip_kinds.split(",")
+
     info("Downloading schema")
     if sys.version_info < (3, 0):
         response = urllib.urlopen(schema)
@@ -138,6 +146,11 @@ def default(output, schema, prefix, stand_alone, expanded, kubernetes, strict, s
 
     for title in components:
         kind = title.split(".")[-1].lower()
+
+        if kind in skip_kinds:
+            info("Skipping {}".format(kind))
+            continue
+
         if kubernetes:
             group = title.split(".")[-3].lower()
             api_version = title.split(".")[-2].lower()
